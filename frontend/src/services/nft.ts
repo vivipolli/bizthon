@@ -21,12 +21,22 @@ interface MintNFTResponse {
 
 interface NFTResponse {
   address: string;
+  name: string;
+  symbol: string;
   uri: string;
-  // Adicione outros campos conforme necessário
+  image?: string;
+  attributes?: {
+    trait_type: string;
+    value: string | number;
+  }[];
 }
 
-const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || "http://localhost:3000";
+interface TransferNFTResponse {
+  success: boolean;
+  signature: string;
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_NODE_URL;
 
 export const nftService = {
   /**
@@ -53,11 +63,21 @@ export const nftService = {
   /**
    * Minta um novo NFT com a imagem e metadados fornecidos
    */
-  async mintNFT(
+  async mintCertificationNFT(
     imageUrl: string,
     metadata: NFTMetadata
   ): Promise<MintNFTResponse> {
-    const response = await fetch(`${API_BASE_URL}/mint-nft`, {
+    // {
+    //   imageUrl: string,
+    //   vegetationCoverage: string,
+    //   hectaresNumber: string,
+    //   specificAttributes: string,
+    //   waterBodiesCount: string,
+    //   springsCount: string,
+    //   ongoingProjects: string,
+    //   carRegistry: string
+    // }
+    const response = await fetch(`${API_BASE_URL}/mint-certification`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -90,6 +110,28 @@ export const nftService = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.details || "Erro ao buscar NFTs");
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Transfere o NFT para o endereço do usuário
+   */
+  async transferNFT(recipientAddress: string): Promise<TransferNFTResponse> {
+    const response = await fetch(`${API_BASE_URL}/transfer-nft`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipientAddress,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.details || "Erro ao transferir NFT");
     }
 
     return response.json();

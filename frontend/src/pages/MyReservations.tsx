@@ -3,6 +3,7 @@ import { Reservation, ReservationStatus } from "../types/reservation";
 import { nftService } from "../services/nft";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { getSatelliteImage } from "../services/satellite";
 
 function MyReservations() {
   const { publicKey, connected } = useWallet();
@@ -11,7 +12,8 @@ function MyReservations() {
   const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [transferWallet, setTransferWallet] = useState<string>("");
+  const [isTransferring, setIsTransferring] = useState(false);
 
   const [formData, setFormData] = useState({
     vegetationCoverage: "",
@@ -21,6 +23,9 @@ function MyReservations() {
     springsCount: "",
     ongoingProjects: "",
     carRegistry: "",
+    longitude: "",
+    latitude: "",
+    bufferKm: "",
   });
 
   const fetchNFTs = async (walletAddress: string) => {
@@ -100,30 +105,67 @@ function MyReservations() {
     });
   };
 
+  // Função auxiliar para converter URL em File
+  const urlToFile = async (url: string): Promise<File> => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new File([blob], "satellite-image.jpg", { type: "image/jpeg" });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically make an API call
-    const newReservation: Reservation = {
-      id: String(Date.now()),
-      status: "pending",
-      createdAt: new Date().toISOString().split("T")[0],
-    };
 
-    setReservations([newReservation]);
-    setShowForm(false);
-    if (!selectedFile) {
-      alert("Por favor, selecione uma imagem");
-      return;
-    }
+    const coordinates = [
+      [Number(formData.longitude), Number(formData.latitude)],
+    ];
+    const bufferKm = Number(formData.bufferKm);
 
     setIsLoading(true);
     try {
-      // 1. Upload da imagem
-      const imageUrl = await nftService.uploadImage(selectedFile);
+      // 1. Obter imagem de satélite
+      const satelliteImageUrl = await getSatelliteImage(coordinates, bufferKm);
 
-      // 2. Mint do NFT com a imagem e metadados
-      const result = await nftService.mintNFT(imageUrl, formData);
+      // 2. Converter URL em File
+      //const imageFile = await urlToFile(satelliteImageUrl);
+      const imageFile = await urlToFile(
+        "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/thumbnails/b7e3ce4db08b4aba4b3c6fb9134d2a49-6e67f066352f0838e7ae9bd71285f91f:getPixels"
+      );
 
+      // 3. Upload da imagem do satélite como NFT
+      const imageUrl = await nftService.uploadImage(imageFile);
+
+      // 4. Mint do NFT com a imagem e metadados
+      const result = await nftService.mintCertificationNFT(imageUrl, {
+        vegetationCoverage: formData.vegetationCoverage,
+        hectaresNumber: formData.hectaresNumber,
+        specificAttributes: formData.specificAttributes,
+        waterBodiesCount: formData.waterBodiesCount,
+        springsCount: formData.springsCount,
+        ongoingProjects: formData.ongoingProjects,
+        carRegistry: formData.carRegistry,
+      });
+
+      // 5. Atualizar o status da reserva para approved e adicionar dados do NFT
+      setReservations((prevReservations) =>
+        prevReservations.map((reservation) =>
+          reservation.status === "empty"
+            ? {
+                ...reservation,
+                status: "approved" as ReservationStatus,
+                nftData: {
+                  imageUrl,
+                  title: `Carbon Credit Certificate #${result.mintAddress.slice(
+                    -4
+                  )}`,
+                  description: "Certificado de Preservação Ambiental",
+                  issueDate: new Date().toISOString().split("T")[0],
+                },
+              }
+            : reservation
+        )
+      );
+
+      setShowForm(false);
       alert(`NFT mintado com sucesso! Endereço: ${result.mintAddress}`);
     } catch (error) {
       console.error("Erro:", error);
@@ -131,7 +173,26 @@ function MyReservations() {
     } finally {
       setIsLoading(false);
     }
-    alert("Reservation request submitted successfully!");
+  };
+
+  const handleTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferWallet) {
+      alert("Por favor, insira o endereço da carteira");
+      return;
+    }
+
+    setIsTransferring(true);
+    try {
+      const result = await nftService.transferNFT(transferWallet);
+      alert(`NFT transferido com sucesso! Assinatura: ${result.signature}`);
+      setTransferWallet("");
+    } catch (error) {
+      console.error("Erro:", error);
+      alert("Erro ao transferir NFT: " + (error as Error).message);
+    } finally {
+      setIsTransferring(false);
+    }
   };
 
   if (!connected) {
@@ -180,6 +241,10 @@ function MyReservations() {
 
             {reservation.status === "empty" && !showForm && (
               <div className="mt-4 text-center">
+                <p className="text-gray-600 mb-4">
+                  Address: {publicKey?.toString()}
+                </p>
+
                 <p className="text-gray-600 mb-4">
                   You haven't created a reservation request yet.
                 </p>
@@ -292,6 +357,53 @@ function MyReservations() {
                       required
                     />
                   </div>
+                  <div>
+                    <label className="block text-base font-medium text-gray-700 mb-2">
+                      Coordinates
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <input
+                          type="number"
+                          name="longitude"
+                          value={formData.longitude}
+                          onChange={handleInputChange}
+                          placeholder="Longitude (e.g. -57.000)"
+                          step="0.001"
+                          className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="number"
+                          name="latitude"
+                          value={formData.latitude}
+                          onChange={handleInputChange}
+                          placeholder="Latitude (e.g. -16.500)"
+                          step="0.001"
+                          className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-base font-medium text-gray-700 mb-2">
+                      Buffer Zone (km)
+                    </label>
+                    <input
+                      type="number"
+                      name="bufferKm"
+                      value={formData.bufferKm}
+                      onChange={handleInputChange}
+                      placeholder="Buffer in kilometers"
+                      min="0"
+                      step="0.1"
+                      className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
+                      required
+                    />
+                  </div>
                   <div className="flex gap-4 pt-4">
                     <button
                       type="submit"
@@ -334,6 +446,99 @@ function MyReservations() {
                     <p className="text-sm text-gray-500">
                       Issue Date: {reservation.nftData.issueDate}
                     </p>
+
+                    {/* Detalhes do NFT */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h5 className="font-medium text-gray-900 mb-2">
+                        Detalhes do Certificado
+                      </h5>
+                      <div className="space-y-2">
+                        <p className="text-sm">
+                          <span className="font-medium">
+                            Cobertura Vegetal:
+                          </span>{" "}
+                          {formData.vegetationCoverage}%
+                        </p>
+                        <p className="text-sm">
+                          <span className="font-medium">Hectares:</span>{" "}
+                          {formData.hectaresNumber}
+                        </p>
+                        <p className="text-sm">
+                          <span className="font-medium">Corpos d'água:</span>{" "}
+                          {formData.waterBodiesCount}
+                        </p>
+                        <p className="text-sm">
+                          <span className="font-medium">Nascentes:</span>{" "}
+                          {formData.springsCount}
+                        </p>
+                        <p className="text-sm">
+                          <span className="font-medium">Registro CAR:</span>{" "}
+                          {formData.carRegistry}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Status da NFT */}
+                    <div className="bg-yellow-50 p-4 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        <span className="font-medium">Status:</span> NFT gerado
+                        e pronto para transferência
+                      </p>
+                      <p className="text-xs text-yellow-600 mt-1">
+                        Insira o endereço da sua carteira abaixo para receber o
+                        certificado
+                      </p>
+                    </div>
+
+                    {/* Formulário de transferência */}
+                    <form onSubmit={handleTransfer} className="mt-4 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Endereço da Carteira para Transferência
+                        </label>
+                        <input
+                          type="text"
+                          value={transferWallet}
+                          onChange={(e) => setTransferWallet(e.target.value)}
+                          placeholder="Insira o endereço da sua carteira Solana"
+                          className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#45803B] focus:border-[#45803B]"
+                          required
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isTransferring}
+                        className="w-full bg-[#45803B] text-white px-4 py-2 rounded-md hover:bg-[#386832] transition-colors disabled:opacity-50"
+                      >
+                        {isTransferring ? (
+                          <span className="flex items-center justify-center">
+                            <svg
+                              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Transferindo...
+                          </span>
+                        ) : (
+                          "Transferir NFT para Minha Carteira"
+                        )}
+                      </button>
+                    </form>
                   </div>
                 </div>
               </div>

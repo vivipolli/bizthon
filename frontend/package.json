@@ -12,6 +12,7 @@
   },
   "//IMP START": "IMP START - Web3Auth Installation",
   "dependencies": {
+    "@nfteyez/sol-rayz": "^0.10.2",
     "@solana/wallet-adapter-base": "^0.9.23",
     "@solana/wallet-adapter-react": "^0.15.35",
     "@solana/wallet-adapter-react-ui": "^0.9.35",
@@ -28,6 +29,7 @@
     "@web3auth/solana-provider": "^9.6.0",
     "empty-module": "^0.0.2",
     "ethers": "^6.13.2",
+    "install": "^0.13.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.1.5",

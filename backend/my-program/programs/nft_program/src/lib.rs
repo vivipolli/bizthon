@@ -13,7 +13,7 @@ use {
     },
 };
 
-declare_id!("FRiDzBGT1U7Wx76mw7mRoz2W42e7yMj78xiYhyU8nQg7");
+declare_id!("35GtXHKY4m9q9735friqSn8G73QYFZcBf5qzRp3bwGmV");
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct CertificationMetadata {

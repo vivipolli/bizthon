@@ -10,13 +10,17 @@ const {
   Keypair,
   clusterApiUrl,
   PublicKey,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
 } = require("@solana/web3.js");
 const { Program, AnchorProvider } = require("@project-serum/anchor");
-const { PROGRAM_ID, NFT_MINTER_IDL } = require("../constants");
+const { PROGRAM_ID, NFT_MINTER_IDL } = require("./constants");
 const {
   TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
 } = require("@solana/spl-token");
+const { Metaplex } = require("@metaplex-foundation/js");
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
@@ -27,13 +31,15 @@ const upload = multer({ dest: "uploads/" });
 const PINATA_API_KEY = process.env.PINATA_API_KEY;
 const PINATA_SECRET_API_KEY = process.env.PINATA_SECRET_API_KEY;
 const SOLANA_NETWORK = process.env.SOLANA_NETWORK || "devnet";
-const WALLET_SECRET_KEY = Uint8Array.from(
-  JSON.parse(process.env.WALLET_SECRET_KEY)
-);
+const secretKey = Uint8Array.from(JSON.parse(process.env.WALLET_SECRET_KEY));
 
-const connection = new Connection(clusterApiUrl(SOLANA_NETWORK));
-const wallet = Keypair.fromSecretKey(WALLET_SECRET_KEY);
+// Cria uma conexão com o cluster Devnet
+const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 
+// Cria um Keypair a partir da chave secreta
+const wallet = Keypair.fromSecretKey(secretKey);
+
+// Exibe o endereço público da carteira
 console.log("Endereço da carteira:", wallet.publicKey.toBase58());
 
 const provider = new AnchorProvider(
@@ -52,7 +58,21 @@ const provider = new AnchorProvider(
   { commitment: "confirmed" }
 );
 
-const program = new Program(NFT_MINTER_IDL, PROGRAM_ID, provider);
+// Primeiro, vamos fazer um log do IDL e do PROGRAM_ID
+console.log("IDL:", NFT_MINTER_IDL);
+console.log("PROGRAM_ID:", PROGRAM_ID);
+
+// Depois, inicializamos o programa
+const program = new Program(
+  NFT_MINTER_IDL,
+  new PublicKey(PROGRAM_ID),
+  provider
+);
+
+// Vamos fazer um log dos métodos disponíveis
+console.log("Program methods:", Object.keys(program.methods));
+
+const NFT_MINT_ADDRESS = process.env.NFT_MINT_ADDRESS;
 
 // Função para upload da imagem no Pinata
 async function uploadToPinata(filePath, fileName) {
@@ -152,21 +172,106 @@ app.post("/mint-certification", async (req, res) => {
         name: metadata.name,
         symbol: metadata.symbol,
         uri: metadataUrl,
-        vegetationCoverage,
-        hectaresNumber,
-        specificAttributes,
-        waterBodiesCount,
-        springsCount,
-        ongoingProjects,
-        carRegistry,
+        vegetation_coverage: vegetationCoverage,
+        hectares_number: hectaresNumber,
+        specific_attributes: specificAttributes,
+        water_bodies_count: waterBodiesCount,
+        springs_count: springsCount,
+        ongoing_projects: ongoingProjects,
+        car_registry: carRegistry,
       })
       .accounts({
+        metadata_account: PublicKey.findProgramAddressSync(
+          [
+            Buffer.from("metadata"),
+            new PublicKey(
+              "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+            ).toBuffer(),
+            mintKeypair.publicKey.toBuffer(),
+          ],
+          new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
+        )[0],
+        edition_account: PublicKey.findProgramAddressSync(
+          [
+            Buffer.from("metadata"),
+            new PublicKey(
+              "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+            ).toBuffer(),
+            mintKeypair.publicKey.toBuffer(),
+            Buffer.from("edition"),
+          ],
+          new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
+        )[0],
+        mint_account: mintKeypair.publicKey,
+        associated_token_account: await getAssociatedTokenAddress(
+          mintKeypair.publicKey,
+          wallet.publicKey
+        ),
+        token_program: TOKEN_PROGRAM_ID,
+        token_metadata_program: new PublicKey(
+          "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+        ),
+        associated_token_program: new PublicKey(
+          "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        ),
+        system_program: SystemProgram.programId,
         payer: wallet.publicKey,
-        mintAccount: mintKeypair.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: SYSVAR_RENT_PUBKEY,
       })
       .signers([wallet, mintKeypair])
       .rpc();
+
+    console.log("Metadata:", {
+      name: metadata.name,
+      symbol: metadata.symbol,
+      uri: metadataUrl,
+      vegetationCoverage,
+      hectaresNumber,
+      specificAttributes,
+      waterBodiesCount,
+      springsCount,
+      ongoingProjects,
+      carRegistry,
+    });
+
+    console.log("Accounts:", {
+      payer: wallet.publicKey.toString(),
+      metadataAccount: PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("metadata"),
+          new PublicKey(
+            "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+          ).toBuffer(),
+          mintKeypair.publicKey.toBuffer(),
+        ],
+        new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
+      )[0].toString(),
+      editionAccount: PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("metadata"),
+          new PublicKey(
+            "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+          ).toBuffer(),
+          mintKeypair.publicKey.toBuffer(),
+          Buffer.from("edition"),
+        ],
+        new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
+      )[0].toString(),
+      mintAccount: mintKeypair.publicKey.toString(),
+      associatedTokenAccount: await getAssociatedTokenAddress(
+        mintKeypair.publicKey,
+        wallet.publicKey
+      ).toString(),
+      tokenProgram: TOKEN_PROGRAM_ID,
+      tokenMetadataProgram: new PublicKey(
+        "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+      ).toString(),
+      associatedTokenProgram: new PublicKey(
+        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+      ).toString(),
+      systemProgram: SystemProgram.programId.toString(),
+      rent: SYSVAR_RENT_PUBKEY.toString(),
+    });
 
     res.json({
       success: true,
@@ -208,6 +313,130 @@ app.post("/mint-collection", async (req, res) => {
     res
       .status(500)
       .json({ error: "Erro ao mintar NFT de coleção", details: error.message });
+  }
+});
+
+// Rota para transferir NFT
+app.post("/transfer-nft", async (req, res) => {
+  try {
+    const { recipientAddress } = req.body;
+
+    if (!NFT_MINT_ADDRESS) {
+      return res.status(400).json({
+        error:
+          "NFT_MINT_ADDRESS não está configurado nas variáveis de ambiente",
+      });
+    }
+
+    if (!recipientAddress) {
+      return res.status(400).json({
+        error: "Endereço do destinatário é necessário",
+      });
+    }
+
+    // Converter endereços para PublicKey
+    const mintPublicKey = new PublicKey(NFT_MINT_ADDRESS);
+    const recipientPublicKey = new PublicKey(recipientAddress);
+
+    // Obter endereço da conta de token associada do remetente (nossa carteira)
+    const fromATA = await getAssociatedTokenAddress(
+      mintPublicKey,
+      wallet.publicKey
+    );
+
+    // Obter endereço da conta de token associada do destinatário
+    const toATA = await getAssociatedTokenAddress(
+      mintPublicKey,
+      recipientPublicKey
+    );
+
+    // Criar instrução de transferência
+    const tx = await program.methods
+      .transfer()
+      .accounts({
+        from: fromATA,
+        to: toATA,
+        authority: wallet.publicKey,
+        mint: mintPublicKey,
+        recipient: recipientPublicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([wallet])
+      .rpc();
+
+    res.json({
+      success: true,
+      signature: tx,
+    });
+  } catch (error) {
+    console.error("Erro ao transferir NFT:", error);
+    res.status(500).json({
+      error: "Erro ao transferir NFT",
+      details: error.message,
+    });
+  }
+});
+
+// Rota para buscar NFTs de um endereço
+app.get("/nfts", async (req, res) => {
+  try {
+    const { wallet } = req.query;
+
+    if (!wallet) {
+      return res.status(400).json({
+        error: "Endereço da carteira é necessário",
+      });
+    }
+
+    const metaplex = new Metaplex(connection);
+    const ownerPublicKey = new PublicKey(wallet);
+
+    // Busca todas as NFTs do endereço
+    const nfts = await metaplex.nfts().findAllByOwner({
+      owner: ownerPublicKey,
+    });
+
+    // Filtra apenas as NFTs do nosso programa
+    const programNfts = nfts.filter((nft) =>
+      nft.creators?.some((creator) => creator.address.toString() === PROGRAM_ID)
+    );
+
+    // Formata a resposta
+    const formattedNfts = await Promise.all(
+      programNfts.map(async (nft) => {
+        try {
+          return {
+            address: nft.address.toString(),
+            name: nft.name,
+            symbol: nft.symbol,
+            uri: nft.uri,
+            image: nft.json?.image || null,
+            attributes: nft.json?.attributes || [],
+          };
+        } catch (error) {
+          console.error(
+            `Erro ao formatar NFT ${nft.address.toString()}:`,
+            error
+          );
+          return {
+            address: nft.address.toString(),
+            name: nft.name,
+            symbol: nft.symbol,
+            uri: nft.uri,
+          };
+        }
+      })
+    );
+
+    res.json(formattedNfts);
+  } catch (error) {
+    console.error("Erro ao buscar NFTs:", error);
+    res.status(500).json({
+      error: "Erro ao buscar NFTs",
+      details: error.message,
+    });
   }
 });
 
