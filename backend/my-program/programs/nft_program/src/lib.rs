@@ -20,13 +20,6 @@ pub struct CertificationMetadata {
     pub name: String,
     pub symbol: String,
     pub uri: String,
-    pub vegetation_coverage: String,
-    pub hectares_number: String,
-    pub specific_attributes: String,
-    pub water_bodies_count: String,
-    pub springs_count: String,
-    pub ongoing_projects: String,
-    pub car_registry: String,
 }
 
 #[program]

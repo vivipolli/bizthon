@@ -62,6 +62,22 @@ const provider = new AnchorProvider(
 console.log("IDL:", NFT_MINTER_IDL);
 console.log("PROGRAM_ID:", PROGRAM_ID);
 
+// Adicione no início do arquivo, após importar o IDL
+console.log(
+  "IDL Instruction:",
+  JSON.stringify(NFT_MINTER_IDL.instructions[0], null, 2)
+);
+
+// Primeiro, vamos ver a definição do tipo no IDL
+console.log(
+  "Tipo CertificationMetadata:",
+  JSON.stringify(
+    NFT_MINTER_IDL.types.find((t) => t.name === "CertificationMetadata"),
+    null,
+    2
+  )
+);
+
 // Depois, inicializamos o programa
 const program = new Program(
   NFT_MINTER_IDL,
@@ -146,7 +162,8 @@ app.post("/mint-certification", async (req, res) => {
       return res.status(400).json({ error: "URL da imagem é necessária" });
     }
 
-    const metadata = {
+    // 1. Primeiro, criamos os metadados completos que serão armazenados no IPFS
+    const nftMetadata = {
       name: "Certificado de Preservação",
       symbol: "CPNFT",
       description: "Certificado de Preservação Ambiental",
@@ -160,27 +177,30 @@ app.post("/mint-certification", async (req, res) => {
         { trait_type: "Projetos em Andamento", value: ongoingProjects },
         { trait_type: "Registro CAR", value: carRegistry },
       ],
+      properties: {
+        files: [{ uri: imageUrl, type: "image/jpeg" }],
+      },
     };
 
-    const pinataResponse = await uploadJSONToPinata(metadata);
+    // 2. Fazemos upload dos metadados para o IPFS
+    const pinataResponse = await uploadJSONToPinata(nftMetadata);
     const metadataUrl = `ipfs://${pinataResponse.IpfsHash}`;
+
+    // 3. Para o NFT, enviamos apenas o necessário: nome, símbolo e URI
+    const metadata = {
+      metadata: {
+        name: nftMetadata.name,
+        symbol: nftMetadata.symbol,
+        uri: metadataUrl, // Este é o ponteiro para os metadados completos no IPFS
+      },
+    };
 
     const mintKeypair = Keypair.generate();
 
     const tx = await program.methods
-      .mintCertificationNft({
-        name: metadata.name,
-        symbol: metadata.symbol,
-        uri: metadataUrl,
-        vegetation_coverage: vegetationCoverage,
-        hectares_number: hectaresNumber,
-        specific_attributes: specificAttributes,
-        water_bodies_count: waterBodiesCount,
-        springs_count: springsCount,
-        ongoing_projects: ongoingProjects,
-        car_registry: carRegistry,
-      })
+      .mintCertificationNft(metadata)
       .accounts({
+        payer: wallet.publicKey,
         metadata_account: PublicKey.findProgramAddressSync(
           [
             Buffer.from("metadata"),
@@ -215,11 +235,12 @@ app.post("/mint-certification", async (req, res) => {
           "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         ),
         system_program: SystemProgram.programId,
-        payer: wallet.publicKey,
         rent: SYSVAR_RENT_PUBKEY,
       })
       .signers([wallet, mintKeypair])
-      .rpc();
+      .rpc({
+        commitment: "processed",
+      });
 
     console.log("Metadata:", {
       name: metadata.name,
