@@ -1,5 +1,3 @@
-const { PublicKey } = require("@solana/web3.js");
-
 // ID do programa implantado na Solana
 const PROGRAM_ID = "35GtXHKY4m9q9735friqSn8G73QYFZcBf5qzRp3bwGmV";
 // IDL gerado do programa Anchor
@@ -139,7 +137,39 @@ const NFT_MINTER_IDL = {
         },
       ],
     },
+    {
+      name: "transfer_nft",
+      accounts: [
+        {
+          name: "from",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "to",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "authority",
+          isMut: true,
+          isSigner: true,
+        },
+        {
+          name: "metadata",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "token_program",
+          isMut: false,
+          isSigner: false,
+        },
+      ],
+      args: [],
+    },
   ],
+  accounts: [],
   types: [
     {
       name: "CertificationMetadata",
@@ -158,36 +188,15 @@ const NFT_MINTER_IDL = {
             name: "uri",
             type: "string",
           },
-          {
-            name: "vegetation_coverage",
-            type: "string",
-          },
-          {
-            name: "hectares_number",
-            type: "string",
-          },
-          {
-            name: "specific_attributes",
-            type: "string",
-          },
-          {
-            name: "water_bodies_count",
-            type: "string",
-          },
-          {
-            name: "springs_count",
-            type: "string",
-          },
-          {
-            name: "ongoing_projects",
-            type: "string",
-          },
-          {
-            name: "car_registry",
-            type: "string",
-          },
         ],
       },
+    },
+  ],
+  errors: [
+    {
+      code: 6000,
+      name: "AlreadyTransferred",
+      msg: "Este NFT de certificação já foi transferido e não pode ser transferido novamente",
     },
   ],
 };

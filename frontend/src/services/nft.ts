@@ -17,6 +17,7 @@ interface MintNFTResponse {
   success: boolean;
   mintAddress: string;
   metadataUrl: string;
+  signature: string;
 }
 
 interface NFTResponse {
@@ -29,11 +30,6 @@ interface NFTResponse {
     trait_type: string;
     value: string | number;
   }[];
-}
-
-interface TransferNFTResponse {
-  success: boolean;
-  signature: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_NODE_URL;
@@ -65,18 +61,9 @@ export const nftService = {
    */
   async mintCertificationNFT(
     imageUrl: string,
-    metadata: NFTMetadata
+    metadata: NFTMetadata,
+    recipientAddress: string
   ): Promise<MintNFTResponse> {
-    // {
-    //   imageUrl: string,
-    //   vegetationCoverage: string,
-    //   hectaresNumber: string,
-    //   specificAttributes: string,
-    //   waterBodiesCount: string,
-    //   springsCount: string,
-    //   ongoingProjects: string,
-    //   carRegistry: string
-    // }
     const response = await fetch(`${API_BASE_URL}/mint-certification`, {
       method: "POST",
       headers: {
@@ -84,6 +71,7 @@ export const nftService = {
       },
       body: JSON.stringify({
         imageUrl,
+        recipientAddress,
         ...metadata,
       }),
     });
@@ -110,28 +98,6 @@ export const nftService = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.details || "Erro ao buscar NFTs");
-    }
-
-    return response.json();
-  },
-
-  /**
-   * Transfere o NFT para o endereço do usuário
-   */
-  async transferNFT(recipientAddress: string): Promise<TransferNFTResponse> {
-    const response = await fetch(`${API_BASE_URL}/transfer-nft`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        recipientAddress,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.details || "Erro ao transferir NFT");
     }
 
     return response.json();

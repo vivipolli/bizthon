@@ -8,7 +8,7 @@ skip-lint = false
 nft_program = "FRiDzBGT1U7Wx76mw7mRoz2W42e7yMj78xiYhyU8nQg7"
 
 [programs.devnet]
-nft_program = "35GtXHKY4m9q9735friqSn8G73QYFZcBf5qzRp3bwGmV" 
+nft_minter = "35GtXHKY4m9q9735friqSn8G73QYFZcBf5qzRp3bwGmV" 
 
 [registry]
 url = "https://api.apr.dev"

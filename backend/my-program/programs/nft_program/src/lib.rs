@@ -9,7 +9,7 @@ use {
             mpl_token_metadata::types::{DataV2, Uses, UseMethod}, CreateMasterEditionV3, CreateMetadataAccountsV3,
             Metadata,
         },
-        token::{mint_to, Mint, MintTo, Token, TokenAccount},
+        token::{mint_to, Mint, MintTo, Token, TokenAccount, transfer, Transfer},
     },
 };
 
@@ -167,6 +167,32 @@ pub mod nft_minter {
         msg!("Collection NFT minted successfully.");
         Ok(())
     }
+
+    pub fn transfer_nft(ctx: Context<TransferNft>) -> Result<()> {
+        msg!("Iniciando transferência do NFT");
+        
+        // Verifica se é um NFT de certificação através do metadata
+        if let Ok(metadata) = &ctx.accounts.metadata.try_borrow_data() {
+            if metadata.len() >= 9 && metadata[8] == 1 { // Verifica se tem uses
+                return Err(ErrorCode::AlreadyTransferred.into());
+            }
+        }
+
+        transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.from.to_account_info(),
+                    to: ctx.accounts.to.to_account_info(),
+                    authority: ctx.accounts.authority.to_account_info(),
+                },
+            ),
+            1,
+        )?;
+
+        msg!("NFT transferido com sucesso");
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -217,4 +243,24 @@ pub struct CreateToken<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
+pub struct TransferNft<'info> {
+    #[account(mut)]
+    pub from: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub to: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    /// CHECK: Metadata account
+    #[account(mut)]
+    pub metadata: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
+}
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Este NFT de certificação já foi transferido e não pode ser transferido novamente")]
+    AlreadyTransferred,
 }

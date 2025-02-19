@@ -12,14 +12,17 @@ const {
   PublicKey,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
+  Transaction,
 } = require("@solana/web3.js");
 const { Program, AnchorProvider } = require("@project-serum/anchor");
 const { PROGRAM_ID, NFT_MINTER_IDL } = require("./constants");
 const {
   TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
 } = require("@solana/spl-token");
-const { Metaplex } = require("@metaplex-foundation/js");
+const { Metaplex, keypairIdentity } = require("@metaplex-foundation/js");
 require("dotenv").config();
 
 const app = express();
@@ -144,6 +147,51 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
   }
 });
 
+// Transformar a rota em função
+async function transferNFT(recipientAddress) {
+  try {
+    const metaplex = new Metaplex(connection);
+    metaplex.use(keypairIdentity(wallet));
+
+    const mintPublicKey = new PublicKey(NFT_MINT_ADDRESS);
+    const recipientPublicKey = new PublicKey(recipientAddress);
+
+    // Primeiro, vamos verificar se o NFT existe
+    const nft = await metaplex
+      .nfts()
+      .findByMint({ mintAddress: mintPublicKey });
+
+    // Transferir o NFT
+    const { response } = await metaplex.nfts().transfer({
+      nftOrSft: nft,
+      fromOwner: wallet.publicKey,
+      toOwner: recipientPublicKey,
+    });
+
+    return {
+      success: true,
+      signature: response.signature,
+    };
+  } catch (error) {
+    console.error("Erro ao transferir NFT:", error);
+    throw error;
+  }
+}
+
+// Manter a rota original usando a função
+app.post("/transfer-nft", async (req, res) => {
+  try {
+    const { recipientAddress } = req.body;
+    const result = await transferNFT(recipientAddress);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({
+      error: "Erro ao transferir NFT",
+      details: error.message,
+    });
+  }
+});
+
 // Rota para mintar o NFT de certificação com metadados
 app.post("/mint-certification", async (req, res) => {
   try {
@@ -162,7 +210,7 @@ app.post("/mint-certification", async (req, res) => {
       return res.status(400).json({ error: "URL da imagem é necessária" });
     }
 
-    // 1. Primeiro, criamos os metadados completos que serão armazenados no IPFS
+    // 1. Primeiro, criamos e enviamos para IPFS os metadados completos (mantendo todos os valores originais)
     const nftMetadata = {
       name: "Certificado de Preservação",
       symbol: "CPNFT",
@@ -177,28 +225,21 @@ app.post("/mint-certification", async (req, res) => {
         { trait_type: "Projetos em Andamento", value: ongoingProjects },
         { trait_type: "Registro CAR", value: carRegistry },
       ],
-      properties: {
-        files: [{ uri: imageUrl, type: "image/jpeg" }],
-      },
     };
 
-    // 2. Fazemos upload dos metadados para o IPFS
+    // 2. Upload para IPFS
     const pinataResponse = await uploadJSONToPinata(nftMetadata);
     const metadataUrl = `ipfs://${pinataResponse.IpfsHash}`;
 
-    // 3. Para o NFT, enviamos apenas o necessário: nome, símbolo e URI
-    const metadata = {
-      metadata: {
-        name: nftMetadata.name,
-        symbol: nftMetadata.symbol,
-        uri: metadataUrl, // Este é o ponteiro para os metadados completos no IPFS
-      },
-    };
-
+    // 3. Para o NFT, enviamos apenas os campos necessários (mantendo os valores originais)
     const mintKeypair = Keypair.generate();
 
     const tx = await program.methods
-      .mintCertificationNft(metadata)
+      .mintCertificationNft({
+        name: "Certificado de Preservação",
+        symbol: "CPNFT",
+        uri: metadataUrl,
+      })
       .accounts({
         payer: wallet.publicKey,
         metadata_account: PublicKey.findProgramAddressSync(
@@ -243,8 +284,8 @@ app.post("/mint-certification", async (req, res) => {
       });
 
     console.log("Metadata:", {
-      name: metadata.name,
-      symbol: metadata.symbol,
+      name: "Certificado de Preservação",
+      symbol: "CPNFT",
       uri: metadataUrl,
       vegetationCoverage,
       hectaresNumber,
@@ -255,56 +296,26 @@ app.post("/mint-certification", async (req, res) => {
       carRegistry,
     });
 
-    console.log("Accounts:", {
-      payer: wallet.publicKey.toString(),
-      metadataAccount: PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("metadata"),
-          new PublicKey(
-            "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-          ).toBuffer(),
-          mintKeypair.publicKey.toBuffer(),
-        ],
-        new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
-      )[0].toString(),
-      editionAccount: PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("metadata"),
-          new PublicKey(
-            "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-          ).toBuffer(),
-          mintKeypair.publicKey.toBuffer(),
-          Buffer.from("edition"),
-        ],
-        new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
-      )[0].toString(),
-      mintAccount: mintKeypair.publicKey.toString(),
-      associatedTokenAccount: await getAssociatedTokenAddress(
-        mintKeypair.publicKey,
-        wallet.publicKey
-      ).toString(),
-      tokenProgram: TOKEN_PROGRAM_ID,
-      tokenMetadataProgram: new PublicKey(
-        "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-      ).toString(),
-      associatedTokenProgram: new PublicKey(
-        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-      ).toString(),
-      systemProgram: SystemProgram.programId.toString(),
-      rent: SYSVAR_RENT_PUBKEY.toString(),
+    console.log("NFT mintado e transferido com sucesso:", {
+      mintAddress: nft.address.toString(),
+      transferSignature: transferResponse.signature,
     });
+
+    // Após o mint bem sucedido, chamar a função de transferência
+    await transferNFT(recipientAddress);
 
     res.json({
       success: true,
-      signature: tx,
       mintAddress: mintKeypair.publicKey.toString(),
       metadataUrl,
+      signature: tx,
     });
   } catch (error) {
     console.error("Erro ao mintar NFT:", error);
-    res
-      .status(500)
-      .json({ error: "Erro ao mintar NFT", details: error.message });
+    res.status(500).json({
+      error: "Erro ao mintar NFT",
+      details: error.message,
+    });
   }
 });
 
@@ -334,69 +345,6 @@ app.post("/mint-collection", async (req, res) => {
     res
       .status(500)
       .json({ error: "Erro ao mintar NFT de coleção", details: error.message });
-  }
-});
-
-// Rota para transferir NFT
-app.post("/transfer-nft", async (req, res) => {
-  try {
-    const { recipientAddress } = req.body;
-
-    if (!NFT_MINT_ADDRESS) {
-      return res.status(400).json({
-        error:
-          "NFT_MINT_ADDRESS não está configurado nas variáveis de ambiente",
-      });
-    }
-
-    if (!recipientAddress) {
-      return res.status(400).json({
-        error: "Endereço do destinatário é necessário",
-      });
-    }
-
-    // Converter endereços para PublicKey
-    const mintPublicKey = new PublicKey(NFT_MINT_ADDRESS);
-    const recipientPublicKey = new PublicKey(recipientAddress);
-
-    // Obter endereço da conta de token associada do remetente (nossa carteira)
-    const fromATA = await getAssociatedTokenAddress(
-      mintPublicKey,
-      wallet.publicKey
-    );
-
-    // Obter endereço da conta de token associada do destinatário
-    const toATA = await getAssociatedTokenAddress(
-      mintPublicKey,
-      recipientPublicKey
-    );
-
-    // Criar instrução de transferência
-    const tx = await program.methods
-      .transfer()
-      .accounts({
-        from: fromATA,
-        to: toATA,
-        authority: wallet.publicKey,
-        mint: mintPublicKey,
-        recipient: recipientPublicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-        rent: SYSVAR_RENT_PUBKEY,
-      })
-      .signers([wallet])
-      .rpc();
-
-    res.json({
-      success: true,
-      signature: tx,
-    });
-  } catch (error) {
-    console.error("Erro ao transferir NFT:", error);
-    res.status(500).json({
-      error: "Erro ao transferir NFT",
-      details: error.message,
-    });
   }
 });
 

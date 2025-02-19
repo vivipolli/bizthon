@@ -12,8 +12,6 @@ function MyReservations() {
   const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [transferWallet, setTransferWallet] = useState<string>("");
-  const [isTransferring, setIsTransferring] = useState(false);
 
   const [formData, setFormData] = useState({
     vegetationCoverage: "",
@@ -126,24 +124,28 @@ function MyReservations() {
       const satelliteImageUrl = await getSatelliteImage(coordinates, bufferKm);
 
       // 2. Converter URL em File
-      //const imageFile = await urlToFile(satelliteImageUrl);
-      const imageFile = await urlToFile(
-        "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/thumbnails/b7e3ce4db08b4aba4b3c6fb9134d2a49-6e67f066352f0838e7ae9bd71285f91f:getPixels"
-      );
+      const imageFile = await urlToFile(satelliteImageUrl);
 
       // 3. Upload da imagem do satélite como NFT
       const imageUrl = await nftService.uploadImage(imageFile);
 
       // 4. Mint do NFT com a imagem e metadados
-      const result = await nftService.mintCertificationNFT(imageUrl, {
-        vegetationCoverage: formData.vegetationCoverage,
-        hectaresNumber: formData.hectaresNumber,
-        specificAttributes: formData.specificAttributes,
-        waterBodiesCount: formData.waterBodiesCount,
-        springsCount: formData.springsCount,
-        ongoingProjects: formData.ongoingProjects,
-        carRegistry: formData.carRegistry,
-      });
+      console.log("Iniciando mint do NFT...");
+      const result = await nftService.mintCertificationNFT(
+        imageUrl,
+        {
+          vegetationCoverage: formData.vegetationCoverage,
+          hectaresNumber: formData.hectaresNumber,
+          specificAttributes: formData.specificAttributes,
+          waterBodiesCount: formData.waterBodiesCount,
+          springsCount: formData.springsCount,
+          ongoingProjects: formData.ongoingProjects,
+          carRegistry: formData.carRegistry,
+        },
+        publicKey!.toString()
+      );
+      console.log("Resultado do mint:", result);
+      console.log("Token Account:", result.associatedTokenAccount);
 
       // 5. Atualizar o status da reserva para approved e adicionar dados do NFT
       setReservations((prevReservations) =>
@@ -168,30 +170,10 @@ function MyReservations() {
       setShowForm(false);
       alert(`NFT mintado com sucesso! Endereço: ${result.mintAddress}`);
     } catch (error) {
-      console.error("Erro:", error);
+      console.error("Erro detalhado:", error);
       alert("Erro ao criar NFT: " + (error as Error).message);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleTransfer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!transferWallet) {
-      alert("Por favor, insira o endereço da carteira");
-      return;
-    }
-
-    setIsTransferring(true);
-    try {
-      const result = await nftService.transferNFT(transferWallet);
-      alert(`NFT transferido com sucesso! Assinatura: ${result.signature}`);
-      setTransferWallet("");
-    } catch (error) {
-      console.error("Erro:", error);
-      alert("Erro ao transferir NFT: " + (error as Error).message);
-    } finally {
-      setIsTransferring(false);
     }
   };
 
@@ -479,66 +461,15 @@ function MyReservations() {
                     </div>
 
                     {/* Status da NFT */}
-                    <div className="bg-yellow-50 p-4 rounded-lg">
-                      <p className="text-sm text-yellow-800">
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <p className="text-sm text-green-800">
                         <span className="font-medium">Status:</span> NFT gerado
-                        e pronto para transferência
+                        e transferido para sua carteira
                       </p>
-                      <p className="text-xs text-yellow-600 mt-1">
-                        Insira o endereço da sua carteira abaixo para receber o
-                        certificado
+                      <p className="text-xs text-green-600 mt-1">
+                        O certificado já está disponível em sua carteira
                       </p>
                     </div>
-
-                    {/* Formulário de transferência */}
-                    <form onSubmit={handleTransfer} className="mt-4 space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Endereço da Carteira para Transferência
-                        </label>
-                        <input
-                          type="text"
-                          value={transferWallet}
-                          onChange={(e) => setTransferWallet(e.target.value)}
-                          placeholder="Insira o endereço da sua carteira Solana"
-                          className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#45803B] focus:border-[#45803B]"
-                          required
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={isTransferring}
-                        className="w-full bg-[#45803B] text-white px-4 py-2 rounded-md hover:bg-[#386832] transition-colors disabled:opacity-50"
-                      >
-                        {isTransferring ? (
-                          <span className="flex items-center justify-center">
-                            <svg
-                              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                            Transferindo...
-                          </span>
-                        ) : (
-                          "Transferir NFT para Minha Carteira"
-                        )}
-                      </button>
-                    </form>
                   </div>
                 </div>
               </div>
