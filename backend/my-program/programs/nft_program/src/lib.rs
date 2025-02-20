@@ -169,11 +169,11 @@ pub mod nft_minter {
     }
 
     pub fn transfer_nft(ctx: Context<TransferNft>) -> Result<()> {
-        msg!("Iniciando transferência do NFT");
+        msg!("Starting NFT transfer");
         
-        // Verifica se é um NFT de certificação através do metadata
+        // Check if it's a certification NFT through metadata
         if let Ok(metadata) = &ctx.accounts.metadata.try_borrow_data() {
-            if metadata.len() >= 9 && metadata[8] == 1 { // Verifica se tem uses
+            if metadata.len() >= 9 && metadata[8] == 1 { // Check if it has uses
                 return Err(ErrorCode::AlreadyTransferred.into());
             }
         }
@@ -190,7 +190,7 @@ pub mod nft_minter {
             1,
         )?;
 
-        msg!("NFT transferido com sucesso");
+        msg!("NFT transferred successfully");
         Ok(())
     }
 }
@@ -261,6 +261,6 @@ pub struct TransferNft<'info> {
 
 #[error_code]
 pub enum ErrorCode {
-    #[msg("Este NFT de certificação já foi transferido e não pode ser transferido novamente")]
+    #[msg("This certification NFT has already been transferred and cannot be transferred again")]
     AlreadyTransferred,
 }

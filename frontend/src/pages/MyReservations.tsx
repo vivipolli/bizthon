@@ -4,6 +4,7 @@ import { nftService } from "../services/nft";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { getSatelliteImage } from "../services/satellite";
+import { ReservationForm } from "../components/ReservationForm";
 
 function MyReservations() {
   const { publicKey, connected } = useWallet();
@@ -46,10 +47,10 @@ function MyReservations() {
           status: "approved" as ReservationStatus,
           createdAt: new Date().toISOString().split("T")[0],
           nftData: {
-            imageUrl: nft.uri,
-            title: `Carbon Credit Certificate #${nft.address.slice(-4)}`,
-            description:
-              "This NFT certifies the registration of carbon credits for sustainable forest management and conservation practices.",
+            imageUrl: nft.image,
+            title: nft.name,
+            description: nft.description,
+            attributes: nft.attributes,
             issueDate: new Date().toISOString().split("T")[0],
           },
         }));
@@ -144,8 +145,6 @@ function MyReservations() {
         },
         publicKey!.toString()
       );
-      console.log("Resultado do mint:", result);
-      console.log("Token Account:", result.associatedTokenAccount);
 
       // 5. Atualizar o status da reserva para approved e adicionar dados do NFT
       setReservations((prevReservations) =>
@@ -179,16 +178,26 @@ function MyReservations() {
 
   if (!connected) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-600 mb-4">
-          Please connect your wallet to view your reservations.
-        </p>
-        <button
-          onClick={() => setVisible(true)}
-          className="bg-[#45803B] text-white px-6 py-2 rounded-md hover:bg-[#386832] transition-colors"
-        >
-          Connect Wallet
-        </button>
+      <div className="max-w-2xl mx-auto text-center py-12 px-4">
+        <div className="bg-gray-50 rounded-lg p-8 shadow-sm">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+            Wallet Connection Required
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Please connect your wallet to view your reservations.
+          </p>
+          <div className="text-sm text-amber-600 bg-amber-50 p-4 rounded-md mb-6">
+            <span className="font-bold">Important!</span> The connected wallet
+            address will be used to receive your NFT. Please make sure to
+            connect the correct wallet.
+          </div>
+          <button
+            onClick={() => setVisible(true)}
+            className="bg-[#45803B] text-white px-8 py-3 rounded-md hover:bg-[#386832] transition-colors font-medium"
+          >
+            Connect Wallet
+          </button>
+        </div>
       </div>
     );
   }
@@ -244,164 +253,13 @@ function MyReservations() {
                 <h3 className="text-2xl font-semibold text-[#45803B] mb-6">
                   New Reservation Request
                 </h3>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
-                      Vegetation Coverage (%)
-                    </label>
-                    <input
-                      type="number"
-                      name="vegetationCoverage"
-                      value={formData.vegetationCoverage}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
-                      Number of Hectares
-                    </label>
-                    <input
-                      type="number"
-                      name="hectaresNumber"
-                      value={formData.hectaresNumber}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
-                      Specific Attributes
-                    </label>
-                    <textarea
-                      name="specificAttributes"
-                      value={formData.specificAttributes}
-                      onChange={handleInputChange}
-                      placeholder="E.g.: Presence of centenary trees, refuge area for endangered species"
-                      rows={4}
-                      className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
-                      Number of Water Bodies
-                    </label>
-                    <input
-                      type="number"
-                      name="waterBodiesCount"
-                      value={formData.waterBodiesCount}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
-                      Number of Springs
-                    </label>
-                    <input
-                      type="number"
-                      name="springsCount"
-                      value={formData.springsCount}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
-                      Ongoing Projects
-                    </label>
-                    <textarea
-                      name="ongoingProjects"
-                      value={formData.ongoingProjects}
-                      onChange={handleInputChange}
-                      placeholder="E.g.: Recovery of degraded areas, sustainable management of açaí palms"
-                      rows={4}
-                      className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
-                      CAR Registry
-                    </label>
-                    <input
-                      type="text"
-                      name="carRegistry"
-                      value={formData.carRegistry}
-                      onChange={handleInputChange}
-                      placeholder="CAR-123456789-XX"
-                      className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
-                      Coordinates
-                    </label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <input
-                          type="number"
-                          name="longitude"
-                          value={formData.longitude}
-                          onChange={handleInputChange}
-                          placeholder="Longitude (e.g. -57.000)"
-                          step="0.001"
-                          className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <input
-                          type="number"
-                          name="latitude"
-                          value={formData.latitude}
-                          onChange={handleInputChange}
-                          placeholder="Latitude (e.g. -16.500)"
-                          step="0.001"
-                          className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
-                      Buffer Zone (km)
-                    </label>
-                    <input
-                      type="number"
-                      name="bufferKm"
-                      value={formData.bufferKm}
-                      onChange={handleInputChange}
-                      placeholder="Buffer in kilometers"
-                      min="0"
-                      step="0.1"
-                      className="mt-1 block w-full p-3 rounded-md border-gray-300 shadow-sm focus:border-[#45803B] focus:ring-[#45803B] text-base"
-                      required
-                    />
-                  </div>
-                  <div className="flex gap-4 pt-4">
-                    <button
-                      type="submit"
-                      className="bg-[#45803B] text-white px-8 py-3 rounded-md hover:bg-[#386832] transition-colors text-base font-medium"
-                    >
-                      Submit Request
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowForm(false)}
-                      className="bg-gray-200 text-gray-800 px-8 py-3 rounded-md hover:bg-gray-300 transition-colors text-base font-medium"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
+                <ReservationForm
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  handleSubmit={handleSubmit}
+                  setShowForm={setShowForm}
+                  //isLoading={isLoading}
+                />
               </div>
             )}
 
@@ -429,34 +287,20 @@ function MyReservations() {
                       Issue Date: {reservation.nftData.issueDate}
                     </p>
 
-                    {/* Detalhes do NFT */}
+                    {/* Detalhes do NFT usando os atributos retornados pela API */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h5 className="font-medium text-gray-900 mb-2">
                         Detalhes do Certificado
                       </h5>
                       <div className="space-y-2">
-                        <p className="text-sm">
-                          <span className="font-medium">
-                            Cobertura Vegetal:
-                          </span>{" "}
-                          {formData.vegetationCoverage}%
-                        </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Hectares:</span>{" "}
-                          {formData.hectaresNumber}
-                        </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Corpos d'água:</span>{" "}
-                          {formData.waterBodiesCount}
-                        </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Nascentes:</span>{" "}
-                          {formData.springsCount}
-                        </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Registro CAR:</span>{" "}
-                          {formData.carRegistry}
-                        </p>
+                        {reservation.nftData.attributes?.map((attr, index) => (
+                          <p key={index} className="text-sm">
+                            <span className="font-medium">
+                              {attr.trait_type}:
+                            </span>{" "}
+                            {attr.value}
+                          </p>
+                        ))}
                       </div>
                     </div>
 

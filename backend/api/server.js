@@ -12,15 +12,12 @@ const {
   PublicKey,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
-  Transaction,
 } = require("@solana/web3.js");
 const { Program, AnchorProvider } = require("@project-serum/anchor");
 const { PROGRAM_ID, NFT_MINTER_IDL } = require("./constants");
 const {
   TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
-  createAssociatedTokenAccountInstruction,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
 } = require("@solana/spl-token");
 const { Metaplex, keypairIdentity } = require("@metaplex-foundation/js");
 require("dotenv").config();
@@ -33,17 +30,10 @@ const upload = multer({ dest: "uploads/" });
 
 const PINATA_API_KEY = process.env.PINATA_API_KEY;
 const PINATA_SECRET_API_KEY = process.env.PINATA_SECRET_API_KEY;
-const SOLANA_NETWORK = process.env.SOLANA_NETWORK || "devnet";
 const secretKey = Uint8Array.from(JSON.parse(process.env.WALLET_SECRET_KEY));
 
-// Cria uma conexão com o cluster Devnet
 const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
-
-// Cria um Keypair a partir da chave secreta
 const wallet = Keypair.fromSecretKey(secretKey);
-
-// Exibe o endereço público da carteira
-console.log("Endereço da carteira:", wallet.publicKey.toBase58());
 
 const provider = new AnchorProvider(
   connection,
@@ -61,39 +51,15 @@ const provider = new AnchorProvider(
   { commitment: "confirmed" }
 );
 
-// Primeiro, vamos fazer um log do IDL e do PROGRAM_ID
-console.log("IDL:", NFT_MINTER_IDL);
-console.log("PROGRAM_ID:", PROGRAM_ID);
-
-// Adicione no início do arquivo, após importar o IDL
-console.log(
-  "IDL Instruction:",
-  JSON.stringify(NFT_MINTER_IDL.instructions[0], null, 2)
-);
-
-// Primeiro, vamos ver a definição do tipo no IDL
-console.log(
-  "Tipo CertificationMetadata:",
-  JSON.stringify(
-    NFT_MINTER_IDL.types.find((t) => t.name === "CertificationMetadata"),
-    null,
-    2
-  )
-);
-
-// Depois, inicializamos o programa
 const program = new Program(
   NFT_MINTER_IDL,
   new PublicKey(PROGRAM_ID),
   provider
 );
 
-// Vamos fazer um log dos métodos disponíveis
-console.log("Program methods:", Object.keys(program.methods));
-
 const NFT_MINT_ADDRESS = process.env.NFT_MINT_ADDRESS;
 
-// Função para upload da imagem no Pinata
+// Function to upload image to Pinata
 async function uploadToPinata(filePath, fileName) {
   const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
   const data = new FormData();
@@ -109,7 +75,7 @@ async function uploadToPinata(filePath, fileName) {
   return response.data;
 }
 
-// Função para upload dos metadados JSON no Pinata
+// Function to upload JSON metadata to Pinata
 async function uploadJSONToPinata(jsonData) {
   const url = "https://api.pinata.cloud/pinning/pinJSONToIPFS";
   const headers = {
@@ -122,11 +88,10 @@ async function uploadJSONToPinata(jsonData) {
   return response.data;
 }
 
-// Rota para upload da imagem
 app.post("/upload-image", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: "Nenhuma imagem enviada" });
+      return res.status(400).json({ error: "No image uploaded" });
     }
 
     const filePath = req.file.path;
@@ -140,30 +105,30 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
       imageUrl: `ipfs://${pinataResponse.IpfsHash}`,
     });
   } catch (error) {
-    console.error("Erro no upload da imagem:", error);
+    console.error("Error uploading image:", error);
     res
       .status(500)
-      .json({ error: "Erro no upload da imagem", details: error.message });
+      .json({ error: "Error uploading image", details: error.message });
   }
 });
 
-// Transformar a rota em função
-async function transferNFT(recipientAddress) {
+async function transferNFT(recipientAddress, mintAddress) {
   try {
     const metaplex = new Metaplex(connection);
     metaplex.use(keypairIdentity(wallet));
 
-    const mintPublicKey = new PublicKey(NFT_MINT_ADDRESS);
+    const mintPublicKey = new PublicKey(mintAddress);
     const recipientPublicKey = new PublicKey(recipientAddress);
 
-    // Primeiro, vamos verificar se o NFT existe
     const nft = await metaplex
       .nfts()
       .findByMint({ mintAddress: mintPublicKey });
 
-    // Transferir o NFT
     const { response } = await metaplex.nfts().transfer({
-      nftOrSft: nft,
+      nftOrSft: {
+        address: mintPublicKey,
+        tokenStandard: nft.tokenStandard,
+      },
       fromOwner: wallet.publicKey,
       toOwner: recipientPublicKey,
     });
@@ -173,26 +138,11 @@ async function transferNFT(recipientAddress) {
       signature: response.signature,
     };
   } catch (error) {
-    console.error("Erro ao transferir NFT:", error);
+    console.error("Detailed error transferring NFT:", error);
     throw error;
   }
 }
 
-// Manter a rota original usando a função
-app.post("/transfer-nft", async (req, res) => {
-  try {
-    const { recipientAddress } = req.body;
-    const result = await transferNFT(recipientAddress);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      error: "Erro ao transferir NFT",
-      details: error.message,
-    });
-  }
-});
-
-// Rota para mintar o NFT de certificação com metadados
 app.post("/mint-certification", async (req, res) => {
   try {
     const {
@@ -204,39 +154,44 @@ app.post("/mint-certification", async (req, res) => {
       springsCount,
       ongoingProjects,
       carRegistry,
+      recipientAddress,
     } = req.body;
 
     if (!imageUrl) {
-      return res.status(400).json({ error: "URL da imagem é necessária" });
+      return res.status(400).json({ error: "Image URL is required" });
     }
 
-    // 1. Primeiro, criamos e enviamos para IPFS os metadados completos (mantendo todos os valores originais)
+    if (!recipientAddress) {
+      return res.status(400).json({ error: "Recipient address is required" });
+    }
+
+    // Create and upload complete metadata to IPFS
     const nftMetadata = {
-      name: "Certificado de Preservação",
+      name: "Preservation Certificate",
       symbol: "CPNFT",
-      description: "Certificado de Preservação Ambiental",
+      description: "Environmental Preservation Certificate",
       image: imageUrl,
       attributes: [
-        { trait_type: "Cobertura Vegetal", value: vegetationCoverage },
-        { trait_type: "Número de Hectares", value: hectaresNumber },
-        { trait_type: "Atributos Específicos", value: specificAttributes },
-        { trait_type: "Corpos d'água", value: waterBodiesCount },
-        { trait_type: "Nascentes", value: springsCount },
-        { trait_type: "Projetos em Andamento", value: ongoingProjects },
-        { trait_type: "Registro CAR", value: carRegistry },
+        { trait_type: "Vegetation Coverage", value: vegetationCoverage },
+        { trait_type: "Hectares Number", value: hectaresNumber },
+        { trait_type: "Specific Attributes", value: specificAttributes },
+        { trait_type: "Water Bodies", value: waterBodiesCount },
+        { trait_type: "Springs", value: springsCount },
+        { trait_type: "Ongoing Projects", value: ongoingProjects },
+        { trait_type: "CAR Registry", value: carRegistry },
       ],
     };
 
-    // 2. Upload para IPFS
+    // Upload to IPFS
     const pinataResponse = await uploadJSONToPinata(nftMetadata);
     const metadataUrl = `ipfs://${pinataResponse.IpfsHash}`;
 
-    // 3. Para o NFT, enviamos apenas os campos necessários (mantendo os valores originais)
+    // For the NFT, we send only the necessary fields (keeping original values)
     const mintKeypair = Keypair.generate();
 
     const tx = await program.methods
       .mintCertificationNft({
-        name: "Certificado de Preservação",
+        name: "Preservation Certificate",
         symbol: "CPNFT",
         uri: metadataUrl,
       })
@@ -284,7 +239,7 @@ app.post("/mint-certification", async (req, res) => {
       });
 
     console.log("Metadata:", {
-      name: "Certificado de Preservação",
+      name: "Preservation Certificate",
       symbol: "CPNFT",
       uri: metadataUrl,
       vegetationCoverage,
@@ -296,8 +251,14 @@ app.post("/mint-certification", async (req, res) => {
       carRegistry,
     });
 
-    // Após o mint bem sucedido, chamar a função de transferência
-    await transferNFT(recipientAddress);
+    // After successful mint, transfer the NFT using the correct mintAddress
+    try {
+      await transferNFT(recipientAddress, mintKeypair.publicKey.toString());
+      console.log("NFT transferred successfully to:", recipientAddress);
+    } catch (transferError) {
+      console.error("Error transferring NFT:", transferError);
+      // Even if the transfer fails, we return success of the mint
+    }
 
     res.json({
       success: true,
@@ -306,9 +267,9 @@ app.post("/mint-certification", async (req, res) => {
       signature: tx,
     });
   } catch (error) {
-    console.error("Erro ao mintar NFT:", error);
+    console.error("Error minting NFT:", error);
     res.status(500).json({
-      error: "Erro ao mintar NFT",
+      error: "Error minting NFT",
       details: error.message,
     });
   }
@@ -336,12 +297,42 @@ app.post("/mint-collection", async (req, res) => {
       mintAddress: mintKeypair.publicKey.toString(),
     });
   } catch (error) {
-    console.error("Erro ao mintar NFT de coleção:", error);
-    res
-      .status(500)
-      .json({ error: "Erro ao mintar NFT de coleção", details: error.message });
+    console.error("Error minting NFT of collection:", error);
+    res.status(500).json({
+      error: "Error minting NFT of collection",
+      details: error.message,
+    });
   }
 });
+
+// Function to get metadata from Pinata
+async function getPinataMetadata(uri) {
+  try {
+    const cleanedHash = uri.replace(/^ipfs:\/\//, "").replace(/^ipfs:/, "");
+    const metadataIPFS = `https://gateway.pinata.cloud/ipfs/${cleanedHash}`;
+
+    const response = await axios.get(metadataIPFS);
+    const data = response.data;
+
+    // Clean up image hash
+    const cleanedImg = data.image
+      .replace(/^ipfs:\/\//, "")
+      .replace(/^ipfs:/, "");
+
+    return {
+      image: `https://gateway.pinata.cloud/ipfs/${cleanedImg}`,
+      attributes: data.attributes || [],
+      description: data.description,
+    };
+  } catch (error) {
+    console.error("Error getting metadata from Pinata:", error);
+    return {
+      image: null,
+      attributes: [],
+      description: null,
+    };
+  }
+}
 
 // Rota para buscar NFTs de um endereço
 app.get("/nfts", async (req, res) => {
@@ -350,38 +341,43 @@ app.get("/nfts", async (req, res) => {
 
     if (!wallet) {
       return res.status(400).json({
-        error: "Endereço da carteira é necessário",
+        error: "Wallet address is required",
       });
     }
 
     const metaplex = new Metaplex(connection);
     const ownerPublicKey = new PublicKey(wallet);
 
-    // Busca todas as NFTs do endereço
     const nfts = await metaplex.nfts().findAllByOwner({
       owner: ownerPublicKey,
     });
 
-    // Filtra apenas as NFTs do nosso programa
-    const programNfts = nfts.filter((nft) =>
-      nft.creators?.some((creator) => creator.address.toString() === PROGRAM_ID)
-    );
+    const programNfts = nfts.filter((nft) => {
+      return (
+        nft.creators?.some(
+          (creator) => creator.address.toString() === PROGRAM_ID
+        ) || nft.symbol === "CPNFT"
+      );
+    });
 
-    // Formata a resposta
+    // Format the response including Pinata metadata
     const formattedNfts = await Promise.all(
       programNfts.map(async (nft) => {
         try {
+          const metadata = await getPinataMetadata(nft.uri);
+
           return {
             address: nft.address.toString(),
             name: nft.name,
             symbol: nft.symbol,
             uri: nft.uri,
-            image: nft.json?.image || null,
-            attributes: nft.json?.attributes || [],
+            image: metadata.image,
+            attributes: metadata.attributes,
+            description: metadata.description,
           };
         } catch (error) {
           console.error(
-            `Erro ao formatar NFT ${nft.address.toString()}:`,
+            `Error formatting NFT ${nft.address.toString()}:`,
             error
           );
           return {
@@ -389,6 +385,9 @@ app.get("/nfts", async (req, res) => {
             name: nft.name,
             symbol: nft.symbol,
             uri: nft.uri,
+            image: null,
+            attributes: [],
+            description: null,
           };
         }
       })
@@ -396,9 +395,9 @@ app.get("/nfts", async (req, res) => {
 
     res.json(formattedNfts);
   } catch (error) {
-    console.error("Erro ao buscar NFTs:", error);
+    console.error("Error getting NFTs:", error);
     res.status(500).json({
-      error: "Erro ao buscar NFTs",
+      error: "Error getting NFTs",
       details: error.message,
     });
   }

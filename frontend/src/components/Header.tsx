@@ -12,16 +12,7 @@ function Header() {
     <header className="bg-[#45803B] shadow-md py-4 px-6">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <nav className="space-x-6">
-          <Link
-            to="/dashboard"
-            className="text-white hover:text-gray-200 font-medium"
-          >
-            Dashboard
-          </Link>
-          <Link
-            to="/reservations"
-            className="text-white hover:text-gray-200 font-medium"
-          >
+          <Link to="/" className="text-white hover:text-gray-200 font-medium">
             My Reservations
           </Link>
           <Link

@@ -6,13 +6,9 @@ import { useWeb3Auth } from "@web3auth/modal-react-hooks";
 import { ADAPTER_STATUS } from "@web3auth/base";
 import Login from "./pages/Login";
 import Layout from "./components/Layout";
-import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import MyReservations from "./pages/MyReservations";
-// IMP START - Blockchain Calls
-import RPC from "./ethersRPC";
-// import RPC from "./viemRPC";
-// IMP END - Blockchain Calls
+
 import {
   ConnectionProvider,
   WalletProvider,
@@ -39,10 +35,8 @@ function App() {
               {status === ADAPTER_STATUS.CONNECTED ? (
                 <Layout>
                   <Routes>
-                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/" element={<MyReservations />} />
                     <Route path="/profile" element={<Profile />} />
-                    <Route path="/reservations" element={<MyReservations />} />
-                    <Route path="/" element={<Dashboard />} />
                   </Routes>
                 </Layout>
               ) : (

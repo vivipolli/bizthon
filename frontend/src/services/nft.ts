@@ -20,16 +20,17 @@ interface MintNFTResponse {
   signature: string;
 }
 
-interface NFTResponse {
+export interface NFTResponse {
   address: string;
   name: string;
   symbol: string;
   uri: string;
-  image?: string;
-  attributes?: {
+  image: string;
+  attributes: {
     trait_type: string;
     value: string | number;
   }[];
+  description: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_NODE_URL;
