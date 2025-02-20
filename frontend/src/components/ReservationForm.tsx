@@ -34,7 +34,7 @@ export function ReservationForm({
         New Reservation Request
       </h3>
       <form onSubmit={handleSubmit} className="space-y-6">
-        <h4 className="text-xl font-semibold mb-4 text-[#182c15] text-center py-2">
+        <h4 className="text-xl font-semibold mb-4 text-[#182c15] py-2">
           Environmental Data{" "}
         </h4>
         <div className="flex gap-4 grid-cols-3">
@@ -123,7 +123,7 @@ export function ReservationForm({
           />
         </div>
 
-        <h4 className="text-xl font-semibold mb-4 text-[#182c15] text-center py-2">
+        <h4 className="text-xl font-semibold mb-4 text-[#182c15] py-2">
           Geospatial & Registry Information
         </h4>
 
@@ -198,7 +198,7 @@ export function ReservationForm({
           </div>
         </div>
 
-        <h4 className="text-xl font-semibold mb-4 text-[#182c15] text-center py-2">
+        <h4 className="text-xl font-semibold mb-4 text-[#182c15] py-2">
           Ongoing Projects & Sustainability Efforts:
         </h4>
 

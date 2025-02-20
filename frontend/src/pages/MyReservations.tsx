@@ -231,28 +231,36 @@ function MyReservations() {
             </div>
 
             {reservation.status === "empty" && !showForm && (
-              <div className="mt-4 text-center">
-                <p className="text-gray-600 mb-4">
-                  Address: {publicKey?.toString()}
-                </p>
+              <div className="mt-6 text-center space-y-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-gray-700 font-medium mb-2">
+                    Wallet Address
+                  </p>
+                  <p className="font-mono text-sm text-gray-600">
+                    {publicKey?.toString().slice(0, 4)}...
+                    {publicKey?.toString().slice(-4)}
+                  </p>
+                  <p className="text-xs text-amber-600 mt-2">
+                    This address will receive your NFT certificate
+                  </p>
+                </div>
 
-                <p className="text-gray-600 mb-4">
-                  You haven't created a reservation request yet.
-                </p>
-                <button
-                  onClick={() => setShowForm(true)}
-                  className="bg-[#45803B] text-white px-6 py-2 rounded-md hover:bg-[#386832] transition-colors"
-                >
-                  Create New Reservation
-                </button>
+                <div>
+                  <p className="text-gray-600 mb-4">
+                    You haven't created a reservation request yet.
+                  </p>
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="bg-[#45803B] text-white px-8 py-3 rounded-lg hover:bg-[#386832] transition-colors font-medium shadow-sm hover:shadow-md"
+                  >
+                    Create New Reservation
+                  </button>
+                </div>
               </div>
             )}
 
             {showForm && (
               <div className="mt-4 border-t pt-4 max-w-4xl mx-auto">
-                <h3 className="text-2xl font-semibold text-[#45803B] mb-6">
-                  New Reservation Request
-                </h3>
                 <ReservationForm
                   formData={formData}
                   handleInputChange={handleInputChange}
