@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import ee
+import os
+import json
 from google.oauth2 import service_account
 
 app = FastAPI()
@@ -16,7 +18,25 @@ app.add_middleware(
 )
 
 # 🔹 Inicialização do Earth Engine com autenticação
-SERVICE_ACCOUNT_FILE = "service-key.json"
+LOCAL_JSON_PATH = "service-key.json"
+
+if os.getenv("SERVICE_ACCOUNT_JSON"):
+    # Se estiver rodando no Railway, pega o JSON da variável de ambiente
+    service_account_json = os.getenv("SERVICE_ACCOUNT_JSON")
+    service_account_data = json.loads(service_account_json)
+
+    # Salva em um arquivo temporário no Railway
+    temp_filename = "/tmp/service-key.json"
+    with open(temp_filename, "w") as f:
+        json.dump(service_account_data, f)
+
+    SERVICE_ACCOUNT_FILE = temp_filename
+elif os.path.exists(LOCAL_JSON_PATH):
+    # Se estiver rodando localmente, usa o arquivo JSON existente
+    SERVICE_ACCOUNT_FILE = LOCAL_JSON_PATH
+else:
+    raise ValueError("Nenhum JSON encontrado para autenticação!")
+
 credentials = service_account.Credentials.from_service_account_file(
     SERVICE_ACCOUNT_FILE, scopes=["https://www.googleapis.com/auth/earthengine.readonly"]
 )
