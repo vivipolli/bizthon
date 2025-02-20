@@ -296,11 +296,6 @@ app.post("/mint-certification", async (req, res) => {
       carRegistry,
     });
 
-    console.log("NFT mintado e transferido com sucesso:", {
-      mintAddress: nft.address.toString(),
-      transferSignature: transferResponse.signature,
-    });
-
     // Após o mint bem sucedido, chamar a função de transferência
     await transferNFT(recipientAddress);
 
