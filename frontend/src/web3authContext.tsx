@@ -4,7 +4,7 @@ import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import { Web3AuthOptions } from "@web3auth/modal";
 
 const clientId =
-  "BPi5PB_UiIZ-cPz1GtV5i1I2iOSOHuimiXBI0e-Oe_u6X3oVAbCiAZOTEBtTXw4tsluTITPqA8zMsfxIKMjiqNQ";
+  "BNZ3ahrG36eqnHudabgklQPBTudgIlW_kj_-N-R98cUwA0IWqcpBs5zk1-IulVt5dFhCMfKopcDLvuZm8okP4J0";
 
 const chainConfig = {
   chainNamespace: CHAIN_NAMESPACES.EIP155,
