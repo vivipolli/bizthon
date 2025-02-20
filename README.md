@@ -31,42 +31,6 @@ EverGreen transforms environmental preservation efforts into digital certificate
 - **Maps**: Satellite imagery API integration
 - **Storage**: IPFS for NFT metadata
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js (v16 or higher)
-- Phantom Wallet browser extension
-- Solana CLI tools
-
-### Installation
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/yourusername/econft.git
-cd econft
-```
-
-2. Install dependencies:
-
-```bash
-npm install
-```
-
-3. Create a `.env` file with required environment variables:
-
-```env
-REACT_APP_SOLANA_NETWORK=devnet
-REACT_APP_SATELLITE_API_KEY=your_api_key
-```
-
-4. Start the development server:
-
-```bash
-npm start
-```
-
 ## 💡 Usage
 
 1. Connect your Phantom wallet
@@ -103,10 +67,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔮 Future Roadmap
 
 - [ ] Integration with carbon credit markets
-- [ ] Enhanced verification mechanisms
-- [ ] Mobile app development
+- [ ] Request validation mechanisms
 - [ ] Multi-chain support
-- [ ] Marketplace for environmental NFTs
+- [ ] Marketplace for collection NFTs
 
 ---
 

@@ -166,6 +166,11 @@ function MyReservations() {
         )
       );
 
+      // After successful mint, fetch updated NFTs
+      if (publicKey) {
+        await fetchNFTs(publicKey.toString());
+      }
+
       setShowForm(false);
       alert(`NFT minted successfully! Address: ${result.mintAddress}`);
     } catch (error) {
@@ -190,6 +195,20 @@ function MyReservations() {
             <span className="font-bold">Important!</span> The connected wallet
             address will be used to receive your NFT. Please make sure to
             connect the correct wallet.
+          </div>
+          <div className="text-sm text-blue-600 bg-blue-50 p-4 rounded-md mb-6">
+            <span className="font-bold">Testing the application?</span> Your
+            wallet needs SOL tokens on the Solana testnet to perform
+            transactions. You can request test SOL from the{" "}
+            <a
+              href="https://faucet.solana.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-semibold hover:text-blue-800"
+            >
+              Solana Faucet
+            </a>{" "}
+            (up to 2 requests every 8 hours).
           </div>
           <button
             onClick={() => setVisible(true)}
@@ -281,7 +300,7 @@ function MyReservations() {
                   handleInputChange={handleInputChange}
                   handleSubmit={handleSubmit}
                   setShowForm={setShowForm}
-                  //isLoading={isLoading}
+                  isLoading={isLoading}
                 />
               </div>
             )}

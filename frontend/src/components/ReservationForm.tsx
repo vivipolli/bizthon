@@ -20,6 +20,7 @@ interface ReservationFormProps {
   ) => void;
   handleSubmit: (e: React.FormEvent) => void;
   setShowForm: (show: boolean) => void;
+  isLoading: boolean;
 }
 
 export function ReservationForm({
@@ -27,6 +28,7 @@ export function ReservationForm({
   handleInputChange,
   handleSubmit,
   setShowForm,
+  isLoading,
 }: ReservationFormProps) {
   return (
     <div className="mt-4 pt-4 max-w-4xl mx-auto">
@@ -220,14 +222,23 @@ export function ReservationForm({
         <div className="flex gap-4 pt-4">
           <button
             type="submit"
-            className="bg-[#45803B] cursor-pointer text-white px-8 py-3 rounded-md hover:bg-[#386832] transition-colors text-base font-medium"
+            disabled={isLoading}
+            className="bg-[#45803B] cursor-pointer text-white px-8 py-3 rounded-md hover:bg-[#386832] transition-colors text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Submit Request
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                Processing...
+              </>
+            ) : (
+              "Submit Request"
+            )}
           </button>
           <button
             type="button"
             onClick={() => setShowForm(false)}
-            className=" cursor-pointer bg-gray-200 text-gray-800 px-8 py-3 rounded-md hover:bg-gray-300 transition-colors text-base font-medium"
+            disabled={isLoading}
+            className="cursor-pointer bg-gray-200 text-gray-800 px-8 py-3 rounded-md hover:bg-gray-300 transition-colors text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
