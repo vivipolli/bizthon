@@ -29,7 +29,7 @@ export function ReservationForm({
   setShowForm,
 }: ReservationFormProps) {
   return (
-    <div className="mt-4 border-t pt-4 max-w-4xl mx-auto">
+    <div className="mt-4 pt-4 max-w-4xl mx-auto">
       <h3 className="text-2xl font-semibold text-[#45803B] mb-6">
         New Reservation Request
       </h3>

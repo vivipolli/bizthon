@@ -7,7 +7,7 @@ import { getSatelliteImage } from "../services/satellite";
 import { ReservationForm } from "../components/ReservationForm";
 
 function MyReservations() {
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,12 +203,24 @@ function MyReservations() {
   }
 
   if (loading) {
-    return <div>Loading reservations...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#45803B]"></div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-[#45803B]">My Reservations</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-[#45803B]">My Reservations</h1>
+        <button
+          onClick={disconnect}
+          className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors font-medium"
+        >
+          Disconnect Wallet
+        </button>
+      </div>
 
       <div className="grid gap-6">
         {reservations.map((reservation) => (
@@ -216,19 +228,22 @@ function MyReservations() {
             key={reservation.id}
             className="bg-white rounded-lg shadow-md p-6"
           >
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-gray-600 text-sm">
-                  Reservation ID: {reservation.id}
-                </p>
-                <p className="text-gray-600 text-sm">
-                  Created: {reservation.createdAt}
-                </p>
+            {/* Só mostra o cabeçalho com ID, data e status se não for empty */}
+            {reservation.status !== "empty" && (
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <p className="text-gray-600 text-sm">
+                    Reservation ID: {reservation.id}
+                  </p>
+                  <p className="text-gray-600 text-sm">
+                    Created: {reservation.createdAt}
+                  </p>
+                </div>
+                <span className={getStatusBadgeClass(reservation.status)}>
+                  {getStatusText(reservation.status)}
+                </span>
               </div>
-              <span className={getStatusBadgeClass(reservation.status)}>
-                {getStatusText(reservation.status)}
-              </span>
-            </div>
+            )}
 
             {reservation.status === "empty" && !showForm && (
               <div className="mt-6 text-center space-y-6">
@@ -260,7 +275,7 @@ function MyReservations() {
             )}
 
             {showForm && (
-              <div className="mt-4 border-t pt-4 max-w-4xl mx-auto">
+              <div className=" max-w-4xl mx-auto">
                 <ReservationForm
                   formData={formData}
                   handleInputChange={handleInputChange}
