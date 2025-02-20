@@ -32,7 +32,7 @@ function MyReservations() {
     try {
       const nfts = await nftService.getNFTs(walletAddress);
       if (nfts.length === 0) {
-        // Se não houver NFTs, criar uma reserva com status empty
+        // If no NFTs exist, create a reservation with empty status
         setReservations([
           {
             id: "empty",
@@ -41,7 +41,7 @@ function MyReservations() {
           },
         ]);
       } else {
-        // Transformar NFTs existentes em reservas
+        // Transform existing NFTs into reservations
         const nftReservations: Reservation[] = nfts.map((nft) => ({
           id: nft.address,
           status: "approved" as ReservationStatus,
@@ -58,7 +58,7 @@ function MyReservations() {
       }
     } catch (error) {
       console.error("Error fetching NFTs:", error);
-      // Em caso de erro, também definimos como empty para mostrar o formulário
+      // On error, set to empty to show the form
       setReservations([
         {
           id: "empty",
@@ -121,17 +121,17 @@ function MyReservations() {
 
     setIsLoading(true);
     try {
-      // 1. Obter imagem de satélite
+      // 1. Get satellite image
       const satelliteImageUrl = await getSatelliteImage(coordinates, bufferKm);
 
-      // 2. Converter URL em File
+      // 2. Convert URL to File
       const imageFile = await urlToFile(satelliteImageUrl);
 
-      // 3. Upload da imagem do satélite como NFT
+      // 3. Upload satellite image as NFT
       const imageUrl = await nftService.uploadImage(imageFile);
 
-      // 4. Mint do NFT com a imagem e metadados
-      console.log("Iniciando mint do NFT...");
+      // 4. Mint NFT with image and metadata
+      console.log("Starting NFT mint...");
       const result = await nftService.mintCertificationNFT(
         imageUrl,
         {
@@ -146,7 +146,7 @@ function MyReservations() {
         publicKey!.toString()
       );
 
-      // 5. Atualizar o status da reserva para approved e adicionar dados do NFT
+      // 5. Update reservation status to approved and add NFT data
       setReservations((prevReservations) =>
         prevReservations.map((reservation) =>
           reservation.status === "empty"
@@ -158,7 +158,7 @@ function MyReservations() {
                   title: `Carbon Credit Certificate #${result.mintAddress.slice(
                     -4
                   )}`,
-                  description: "Certificado de Preservação Ambiental",
+                  description: "Environmental Preservation Certificate",
                   issueDate: new Date().toISOString().split("T")[0],
                 },
               }
@@ -167,10 +167,10 @@ function MyReservations() {
       );
 
       setShowForm(false);
-      alert(`NFT mintado com sucesso! Endereço: ${result.mintAddress}`);
+      alert(`NFT minted successfully! Address: ${result.mintAddress}`);
     } catch (error) {
-      console.error("Erro detalhado:", error);
-      alert("Erro ao criar NFT: " + (error as Error).message);
+      console.error("Detailed error:", error);
+      alert("Error creating NFT: " + (error as Error).message);
     } finally {
       setIsLoading(false);
     }
@@ -290,7 +290,7 @@ function MyReservations() {
                     {/* Detalhes do NFT usando os atributos retornados pela API */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h5 className="font-medium text-gray-900 mb-2">
-                        Detalhes do Certificado
+                        Certificate Details
                       </h5>
                       <div className="space-y-2">
                         {reservation.nftData.attributes?.map((attr, index) => (
@@ -307,11 +307,11 @@ function MyReservations() {
                     {/* Status da NFT */}
                     <div className="bg-green-50 p-4 rounded-lg">
                       <p className="text-sm text-green-800">
-                        <span className="font-medium">Status:</span> NFT gerado
-                        e transferido para sua carteira
+                        <span className="font-medium">Status:</span> NFT
+                        generated and transferred to your wallet
                       </p>
                       <p className="text-xs text-green-600 mt-1">
-                        O certificado já está disponível em sua carteira
+                        The certificate is now available in your wallet
                       </p>
                     </div>
                   </div>
