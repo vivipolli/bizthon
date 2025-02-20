@@ -1,10 +1,10 @@
-# EcoNFT - Environmental Reserve Certification Platform 🌿
+# EverGreen - Environmental Reserve Certification Platform 🌿
 
 A blockchain-based platform that enables landowners to tokenize their environmental reserves as NFTs, providing transparent and verifiable proof of environmental preservation.
 
 ## 🌍 Overview
 
-EcoNFT transforms environmental preservation efforts into digital certificates using NFT technology on the Solana blockchain. The platform integrates satellite imagery and environmental data to create unique digital certificates that represent verified environmental reserves.
+EverGreen transforms environmental preservation efforts into digital certificates using NFT technology on the Solana blockchain. The platform integrates satellite imagery and environmental data to create unique digital certificates that represent verified environmental reserves.
 
 ## ✨ Key Features
 
@@ -26,7 +26,7 @@ EcoNFT transforms environmental preservation efforts into digital certificates u
 ## 🛠 Technical Stack
 
 - **Frontend**: React.js with TypeScript
-- **Blockchain**: Solana
+- **Blockchain**: Solana with Rust and Anchor
 - **Wallet**: Phantom Wallet integration
 - **Maps**: Satellite imagery API integration
 - **Storage**: IPFS for NFT metadata
@@ -82,15 +82,10 @@ npm start
 - NFT metadata is stored on IPFS for permanence
 - Smart contract ensures immutable record keeping
 
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to submit a Pull Request.
-
 ## 🏆 Hackathon Implementation
 
-This project was developed for [Hackathon Name] with the goal of bringing transparency and verifiability to environmental preservation efforts. Key implementation highlights:
+This project was developed for Bizthon with the goal of bringing transparency and verifiability to environmental preservation efforts. Key implementation highlights:
 
-- **48-hour Development**: Complete MVP developed during the hackathon
 - **Blockchain Innovation**: Novel use of NFTs for environmental certification
 - **Real-world Impact**: Direct application for environmental preservation
 - **Scalable Solution**: Ready for implementation across different regions
@@ -115,4 +110,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Built with �� for the planet 🌍
+Built with 💚 for the planet 🌍
